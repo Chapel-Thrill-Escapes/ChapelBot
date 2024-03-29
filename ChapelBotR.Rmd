@@ -1,5 +1,5 @@
 ---
-title: "Bookeo"
+title: "ChapelBotR"
 output: html_document
 date: "`r Sys.Date()`"
 ---
@@ -124,7 +124,7 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       query = list(
         notifyUsers = "true",
         notifyCustomer = "true",
-        applyCancellationPolicy = "true",
+        applyCancellationPolicy = "false",
         secretKey = secret_key,
         apiKey = api_key,
         trackInCustomerHistory = "true",
