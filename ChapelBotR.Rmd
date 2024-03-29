@@ -60,17 +60,17 @@ bookingResponse <- GET(
 )
 
 #Make the GET request
-# customerResponse <- GET(
-#   url = api_endpoint_customers,
-#   query = list(
-#     apiKey = api_key,
-#     secretKey = secret_key,
-#     createdSince = format(start, "%Y-%m-%dT%H:%M:%SZ"),
-#     expandParticipants = "true",
-#     itemsPerPage = 100
-#   ),
-#   add_headers(`User-Agent` = user_agent)
-# )
+customerResponse <- GET(
+  url = api_endpoint_customers,
+  query = list(
+    apiKey = api_key,
+    secretKey = secret_key,
+    createdSince = format(start, "%Y-%m-%dT%H:%M:%SZ"),
+    expandParticipants = "true",
+    itemsPerPage = 100
+  ),
+  add_headers(`User-Agent` = user_agent)
+)
 
 # MPJWRE is On-Campus Student ($14)
 # UPEMYF is UNC Faculty/Staff ($20)
