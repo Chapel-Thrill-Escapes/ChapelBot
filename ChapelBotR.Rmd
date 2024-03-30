@@ -1,6 +1,6 @@
 ---
 title: "ChapelBotR"
-output: html_document
+output: null_document
 date: "`r Sys.Date()`"
 ---
 
@@ -109,16 +109,17 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       }
     }
   }
-  prevnotoncampus <- read_csv("./data/notoncampus.csv", show_col_types = FALSE)
-  prevnotoncampus[[1]] <- as.character(prevnotoncampus[[1]])
-  prevnotoncampus[[3]] <- as.character(prevnotoncampus[[3]])
+  #prevnotoncampus <- read_csv("./data/notoncampus.csv", show_col_types = FALSE)
+  #prevnotoncampus[[1]] <- as.character(prevnotoncampus[[1]])
+  #prevnotoncampus[[3]] <- as.character(prevnotoncampus[[3]])
   #notoncampus <- anti_join(notoncampus, prevnotoncampus)
   cancelID <- ""
-  for (i in 1:length(unique(notoncampus$BookingID))){
+  if(length(unique(notoncampus$BookingID)) > 0) {
+    for (i in 1:length(unique(notoncampus$BookingID))){
     cancelID <- unique(notoncampus$BookingID)[i]
     PIDs <- paste(notoncampus[notoncampus$BookingID == cancelID, ]$PID, collapse = ", ")
     Names <- paste(notoncampus[notoncampus$BookingID == cancelID, ]$Name, collapse = ", ")
-    reason <- paste0('ChapelBot has cancelled your booking due to no on-campus student match being found for PID(s): ', PIDs, ' and Name(s): ', Names, '. You can rebook at chapelthrillescapes.com/book with a PID matching the names of on-campus students exactly as they appear on their Student ID or for off-campus students select "Student ($16)."')
+    reason <- paste0('ChapelBot has cancelled your booking due to no on-campus UNC student match being found for respective PID(s): ', PIDs, ' and Name(s): ', Names, '. You can rebook at chapelthrillescapes.com/book with a PID matching the names of the on-campus student(s) exactly as they appear on their Student ID or for off-campus students select "Student ($16)." If you think this cancellation is incorrect or have any questions, please send our team an email at admin@chapelthrillescapes.com.')
     response <- DELETE(
       url = paste0(api_endpoint_bookings, "/", cancelID),
       query = list(
@@ -132,11 +133,21 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       ),
       add_headers(`User-Agent` = user_agent)
     )
-    cat(sprintf(http_status(response)$message))
+    cat(http_status(response)$message, "\n")
   }
   combined_notoncampus <- bind_rows(prevnotoncampus, notoncampus)
   write.csv(combined_notoncampus, "./data/notoncampus.csv", row.names = FALSE)
+  } else {
+    cat("No incorrect on-campus students to process.")
+  }
 } else {
-  cat(sprintf("Error fetching bookings: %s\n", http_status(response)$message))
+    if (http_status(bookingResponse)$category == "Success" & http_status(customerResponse)$category != "Success") {
+      cat("Error fetching customers: ", http_status(customerResponse)$message)
+    } else if (http_status(bookingResponse)$category != "Success" & http_status(customerResponse)$category == "Success") {
+      cat("Error fetching bookings: ", http_status(bookingResponse)$message)
+    } else {
+      cat("Error fetching bookings: ", http_status(bookingResponse)$message, "\n")
+      cat("Error fetching customers: ", http_status(customerResponse)$message)
+    }
 }
 ```
