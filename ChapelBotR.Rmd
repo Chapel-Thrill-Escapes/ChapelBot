@@ -109,6 +109,7 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       }
     }
   }
+  prevnotoncampus <- data.frame(BookingID = character(), Name = character(), PID = character(), Name_match = logical(), PID_match = logical(), stringsAsFactors = FALSE)
   #prevnotoncampus <- read_csv("./data/notoncampus.csv", show_col_types = FALSE)
   #prevnotoncampus[[1]] <- as.character(prevnotoncampus[[1]])
   #prevnotoncampus[[3]] <- as.character(prevnotoncampus[[3]])
