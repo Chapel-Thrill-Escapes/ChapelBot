@@ -30,13 +30,15 @@ if (nchar(env_content) > 0) {
   cat(env_content, file = ".env", append = TRUE, sep = "\n")
 }
 dotenv::load_dot_env(".env")
+#Delete .env content
+#writeLines("", ".env")
 # Read the contents of the .env file
 print(readLines(".env"))
 ```
 
 ```{r}
 # Bookeo API credentials
-PID_data <- read.csv("Chapel Thrill Roster.csv")
+PID_data <- read.csv("./data/Chapel Thrill Roster.csv")
 api_key <- Sys.getenv("api_key")
 secret_key <- Sys.getenv("secret_key")
 api_endpoint_bookings <- "https://api.bookeo.com/v2/bookings"
@@ -44,7 +46,7 @@ api_endpoint_customers <- "https://api.bookeo.com/v2/customers"
 user_agent <- "ChapelBot"
 
 start <- as.Date(format(Sys.Date(), "%Y-%m-%d"))  %m+% days(1)
-end <- as.Date(format(Sys.Date(), "%Y-%m-01")) %m+% months(2) - days(2)  # Last day of the next month
+end <- as.Date(format(Sys.Date(), "%Y-%m-01")) %m+% months(1)  # Last day of the next month
 
 bookingResponse <- GET(
     url = api_endpoint_bookings,
@@ -109,37 +111,36 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       }
     }
   }
-  prevnotoncampus <- data.frame(BookingID = character(), Name = character(), PID = character(), Name_match = logical(), PID_match = logical(), stringsAsFactors = FALSE)
-  #prevnotoncampus <- read_csv("./data/notoncampus.csv", show_col_types = FALSE)
+  prevnotoncampus <- read_csv("./data/notoncampus.csv", show_col_types = FALSE)
   #prevnotoncampus[[1]] <- as.character(prevnotoncampus[[1]])
   #prevnotoncampus[[3]] <- as.character(prevnotoncampus[[3]])
   #notoncampus <- anti_join(notoncampus, prevnotoncampus)
   cancelID <- ""
   if(length(unique(notoncampus$BookingID)) > 0) {
     for (i in 1:length(unique(notoncampus$BookingID))){
-    cancelID <- unique(notoncampus$BookingID)[i]
-    PIDs <- paste(notoncampus[notoncampus$BookingID == cancelID, ]$PID, collapse = ", ")
-    Names <- paste(notoncampus[notoncampus$BookingID == cancelID, ]$Name, collapse = ", ")
-    reason <- paste0('ChapelBot has cancelled your booking due to no on-campus UNC student match being found for respective PID(s): ', PIDs, ' and Name(s): ', Names, '. You can rebook at chapelthrillescapes.com/book with a PID matching the names of the on-campus student(s) exactly as they appear on their Student ID or for off-campus students select "Student ($16)." If you think this cancellation is incorrect or have any questions, please send our team an email at admin@chapelthrillescapes.com.')
-    response <- DELETE(
-      url = paste0(api_endpoint_bookings, "/", cancelID),
-      query = list(
-        notifyUsers = "true",
-        notifyCustomer = "true",
-        applyCancellationPolicy = "false",
-        secretKey = secret_key,
-        apiKey = api_key,
-        trackInCustomerHistory = "true",
-        reason = reason
-      ),
-      add_headers(`User-Agent` = user_agent)
-    )
-    cat(http_status(response)$message, "\n")
-  }
-  combined_notoncampus <- bind_rows(prevnotoncampus, notoncampus)
-  write.csv(combined_notoncampus, "./data/notoncampus.csv", row.names = FALSE)
+      cancelID <- unique(notoncampus$BookingID)[i]
+      PIDs <- paste(notoncampus[notoncampus$BookingID == cancelID, ]$PID, collapse = ", ")
+      Names <- paste(notoncampus[notoncampus$BookingID == cancelID, ]$Name, collapse = ", ")
+      reason <- paste0('ChapelBot has cancelled your booking due to no on-campus UNC student match being found for respective PID(s): ', PIDs, ' and Name(s): ', Names, '. You can rebook at chapelthrillescapes.com/book with a PID matching the names of the on-campus student(s) exactly as they appear on their Student ID or for off-campus students select "Student ($16)." If you think this cancellation is incorrect or have any questions, please send our team an email at admin@chapelthrillescapes.com.')
+      response <- DELETE(
+        url = paste0(api_endpoint_bookings, "/", cancelID),
+        query = list(
+          notifyUsers = "true",
+          notifyCustomer = "true",
+          applyCancellationPolicy = "false",
+          secretKey = secret_key,
+          apiKey = api_key,
+          trackInCustomerHistory = "true",
+          reason = reason
+        ),
+        add_headers(`User-Agent` = user_agent)
+      )
+      cat(http_status(response)$message, "\n")
+    }
+    combined_notoncampus <- rbind(prevnotoncampus, notoncampus)
+    write.csv(combined_notoncampus, "./data/notoncampus.csv", row.names = FALSE)
   } else {
-    cat("No incorrect on-campus students to process.")
+      cat("No incorrect on-campus students to process.")
   }
 } else {
     if (http_status(bookingResponse)$category == "Success" & http_status(customerResponse)$category != "Success") {
