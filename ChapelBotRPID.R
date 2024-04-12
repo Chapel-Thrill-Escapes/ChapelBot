@@ -1,10 +1,10 @@
----
-title: "ChapelBotRPID"
-output: null_document
-date: "`r Sys.Date()`"
----
-
-```{r setup, include=FALSE}
+#' ---
+#' title: "ChapelBotRPID"
+#' output: null_document
+#' date: "`r Sys.Date()`"
+#' ---
+#' 
+## ----setup, include=FALSE--------------------------------------------------------------------------------------------------------------------------------------------
 if(!require(dplyr)) {install.packages("dplyr"); library(dplyr)}
 if(!require(tidyverse)) {install.packages("tidyverse"); library(tidyverse)}
 if(!require(rvest)) {install.packages("rvest"); library(rvest)}
@@ -35,9 +35,9 @@ dotenv::load_dot_env(".env")
 #writeLines("", ".env")
 # Read the contents of the .env file
 print(readLines(".env"))
-```
 
-```{r}
+#' 
+## --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Set TRUE to automatically download weekly updated on-campus roster from email
 downloadUpdatedRoster <- TRUE
 if (downloadUpdatedRoster == TRUE) {
@@ -199,4 +199,4 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       cat("Error fetching customers: ", http_status(customerResponse)$message)
     }
 }
-```
+
