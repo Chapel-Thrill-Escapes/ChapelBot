@@ -4,7 +4,7 @@
 #' date: "`r Sys.Date()`"
 #' ---
 #' 
-## ----setup, include=FALSE----------------------------------------------------------------------
+## ----setup, include=FALSE--------------------------------------------------------------------------------------------------------------------------------------------
 if(!require(dplyr)) {install.packages("dplyr"); library(dplyr)}
 if(!require(tidyverse)) {install.packages("tidyverse"); library(tidyverse)}
 if(!require(rvest)) {install.packages("rvest"); library(rvest)}
@@ -22,6 +22,7 @@ if (!require(gmailr)) {install.packages("gmailr"); library(gmailr)}
 if(!require(httr)) {install.packages("httr"); library(httr)}
 if(!require(lubridate)) {install.packages("lubridate"); library(lubridate)}
 if(!require(jsonlite)) {install.packages("jsonlite"); library(jsonlite)}
+if(!require(base64enc)) {install.packages("base64enc"); library(base64enc)}
 setwd(here())
 # Define .env content
 env_content <- ""
@@ -36,9 +37,58 @@ dotenv::load_dot_env(".env")
 print(readLines(".env"))
 
 #' 
-## ----------------------------------------------------------------------------------------------
-# Bookeo API credentials
+## --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Set TRUE to automatically download weekly updated on-campus roster from email
+downloadUpdatedRoster <- TRUE
+if (downloadUpdatedRoster == TRUE) {
+  # Step 1: Set up authentication
+  tryCatch({
+      gm_auth_configure(path = "[CTE]GmailCredentials.json")
+      gm_auth(email = TRUE, cache = ".secret")
+  }, error = function(e) {
+      print("Authentication failed: Could not fetch updated on-campus roster data.")
+  })
+  
+  # Step 2: Search for messages from the last seven days with a specific subject
+  subject_filter <- "StarRez Auto Report - Chapel Thrill Roster"
+  since_date <- format(Sys.Date() - 5, "%Y-%m-%d")  # Gmail uses YYYY-MM-DD format
+  
+  # Construct the search query
+  query <- sprintf('subject:"%s" after:%s', subject_filter, since_date)
+  tryCatch({
+    # Retrieve messages matching the query
+    messages <- gm_messages(search = query, num_results = 1)  # Adjust num_results as needed
+    
+    # Step 3: Check for the attachment and save it
+    if (length(messages) > 0) {
+      # Assuming the first message is the correct one
+      message_id <- messages[[1]]$messages[[1]]$id
+      msg <- gm_message(message_id)
+      # Check if there are attachments in the message
+      if (!is.null(msg$payload$parts)) {
+        for (part in msg$payload$parts) {
+          if (part$filename != "" && grepl("\\.csv$", part$filename)) {
+            # Define the path for saving the file
+            save_path <- file.path(getwd(), "data", "Chapel Thrill Roster.csv")
+            
+            # Save the attachment
+            attachment_data <- gm_attachment(part$body$attachmentId, message_id, user_id = "admin@chapelthrillescapes.com")
+            raw_data <- base64decode(attachment_data$data)
+            writeBin(raw_data, save_path)
+            print(sprintf("Attachment saved as: %s", save_path))
+          }
+        }
+      }
+    } else {
+      print("No messages found with subject 'StarRez Auto Report - Chapel Thrill Roster.'")
+    }
+  }, error = function(e) {
+      print("Message retrieval failed: Could not fetch updated on-campus roster data.")
+  })
+}
 PID_data <- read.csv("./data/Chapel Thrill Roster.csv")
+
+# Bookeo API credentials
 api_key <- Sys.getenv("api_key")
 secret_key <- Sys.getenv("secret_key")
 api_endpoint_bookings <- "https://api.bookeo.com/v2/bookings"
@@ -61,7 +111,8 @@ bookingResponse <- GET(
     add_headers(`User-Agent` = user_agent)
 )
 
-#Make the GET request
+#Make the GET request 
+#I didn't end up using the customer data but this could be helpful for other projects.
 customerResponse <- GET(
   url = api_endpoint_customers,
   query = list(
@@ -112,10 +163,6 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
     }
   }
   prevnotoncampus <- read_csv("./data/notoncampus.csv", show_col_types = FALSE)
-  #prevnotoncampus[[1]] <- as.character(prevnotoncampus[[1]])
-  #prevnotoncampus[[3]] <- as.character(prevnotoncampus[[3]])
-  #notoncampus <- anti_join(notoncampus, prevnotoncampus)
-  cancelID <- ""
   if(length(unique(notoncampus$BookingID)) > 0) {
     for (i in 1:length(unique(notoncampus$BookingID))){
       cancelID <- unique(notoncampus$BookingID)[i]
@@ -137,7 +184,7 @@ if (http_status(bookingResponse)$category == "Success" & http_status(customerRes
       )
       cat(http_status(response)$message, "\n")
     }
-    combined_notoncampus <- rbind(prevnotoncampus, notoncampus)
+    combined_notoncampus <- rbind(notoncampus, prevnotoncampus)
     write.csv(combined_notoncampus, "./data/notoncampus.csv", row.names = FALSE)
   } else {
       cat("No incorrect on-campus students to process.")
